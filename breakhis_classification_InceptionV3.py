@@ -78,14 +78,14 @@ for images, labels in dataset.take(1):
     label = labels[0]
     break
 
-plt.imshow(image.numpy().astype(int))
-plt.title(f"Label: {label.numpy()}")
-plt.axis('off')
-plt.show()
+# plt.imshow(image.numpy().astype(int))
+# plt.title(f"Label: {label.numpy()}")
+# plt.axis('off')
+# plt.show()
 
 
 # Classification model 
-continuous_training = False
+continuous_training = True
 if continuous_training:
     model = load_model("models/inception_fusion_model_final.keras")
 
@@ -134,6 +134,7 @@ else:
     x = layers.BatchNormalization()(x)
     x = layers.Dropout(0.45)(x)
     final_output = layers.Dense(8, activation='softmax')(x)
+    model = Model(inputs=input_layer, outputs=final_output)
 
 
 stopping_callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
@@ -145,7 +146,7 @@ model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
 
 
 
-model = Model(inputs=input_layer, outputs=final_output)
+
 model.save("models/inception_fusion_model.keras")
 
 model.compile(optimizer='adam',
@@ -170,9 +171,9 @@ class_weights = dict(enumerate(class_weights))
 print(class_weights)
 
 
-model.fit(dataset_train, validation_data = dataset_validation, epochs=10, callbacks = [stopping_callback, model_checkpoint_callback], class_weight=class_weights)
+model.fit(dataset_train, validation_data = dataset_validation, epochs=5, callbacks = [stopping_callback, model_checkpoint_callback], class_weight=class_weights)
 
-InceptionV3_model.trainable = True
+model.trainable = True
 
 
 model.compile(optimizer=Adam(1e-5), 
@@ -180,7 +181,7 @@ model.compile(optimizer=Adam(1e-5),
               metrics=['accuracy'])
 
 
-model.fit(dataset_train, validation_data = dataset_validation, epochs=30, callbacks = [stopping_callback, model_checkpoint_callback], class_weight=class_weights)
+model.fit(dataset_train, validation_data = dataset_validation, epochs=5, callbacks = [stopping_callback, model_checkpoint_callback], class_weight=class_weights)
 model.save("models/inception_fusion_model_final.keras")
 
 loss, accuracy = model.evaluate(dataset_validation)

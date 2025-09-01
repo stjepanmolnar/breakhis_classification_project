@@ -39,7 +39,7 @@ dataset = tf.keras.preprocessing.image_dataset_from_directory(
     validation_split=0.2,
     subset="training",
     seed=123,
-    image_size=(300, 300),
+    image_size=(299, 299),
     batch_size=32,
     label_mode="categorical"
 )
@@ -49,7 +49,7 @@ dataset_test = tf.keras.preprocessing.image_dataset_from_directory(
     validation_split=0.2,
     subset="validation",
     seed=123,
-    image_size=(300, 300),
+    image_size=(299, 299),
     batch_size=32,
     label_mode="categorical"
 )
@@ -79,7 +79,7 @@ model_EfficientNetB3 = load_model("models/efficientnet_fusion_model_final.keras"
 model_InceptionV3 = load_model("models/inception_fusion_model_final.keras", custom_objects={"L2NormalizationLayer": L2NormalizationLayer})
 
 
-models = [model_EfficientNetB3, model_InceptionV3]
+models = [model_InceptionV3]
 
 for model in models:
     loss, accuracy = model.evaluate(dataset_validation)
@@ -87,6 +87,7 @@ for model in models:
 
     y_true = []
     y_pred = []
+    images_all = []
 
     for images, labels in dataset_validation:
         preds = model.predict(images)
@@ -97,6 +98,8 @@ for model in models:
             y_true.extend(np.argmax(labels.numpy(), axis=1))
         else:  # already integer labels
             y_true.extend(labels.numpy())
+
+        images_all.extend(images.numpy())
 
 
     print(classification_report(y_true, y_pred, target_names=class_names))
@@ -110,4 +113,64 @@ for model in models:
     plt.xlabel('Predicted')
     plt.ylabel('True')
     plt.title('Confusion Matrix')
+    plt.show()
+
+    y_true = np.array(y_true)
+    y_pred = np.array(y_pred)
+    images_all = np.array(images_all)
+    
+    
+    wrong_1_as_5 = np.where((y_true == 1) & (y_pred == 5))[0]
+    wrong_5_as_1 = np.where((y_true == 5) & (y_pred == 1))[0]
+
+
+    # Prikaz prvih 4 pogrešno klasificirane slike
+    f, axarr = plt.subplots(2,2, figsize=(8,8))
+
+    if len(wrong_1_as_5) > 0:
+        axarr[0,0].imshow(images_all[wrong_1_as_5[0]].astype("uint8"))
+        axarr[0,0].set_title("True 1 -> Pred 5")
+        axarr[0,0].axis("off")
+        
+    if len(wrong_5_as_1) > 0:
+        axarr[0,1].imshow(images_all[wrong_5_as_1[0]].astype("uint8"))
+        axarr[0,1].set_title("True 5 -> Pred 1")
+        axarr[0,1].axis("off")
+        
+    # Ako želiš još dvije za primjer, možeš duplicirati ili uzeti druge indekse
+    if len(wrong_1_as_5) > 1:
+        axarr[1,0].imshow(images_all[wrong_1_as_5[1]].astype("uint8"))
+        axarr[1,0].set_title("True 1 -> Pred 5")
+        axarr[1,0].axis("off")
+        
+    if len(wrong_5_as_1) > 1:
+        axarr[1,1].imshow(images_all[wrong_5_as_1[1]].astype("uint8"))
+        axarr[1,1].set_title("True 5 -> Pred 1")
+        axarr[1,1].axis("off")
+
+    plt.tight_layout()
+    plt.show()
+
+    y_true = []
+    y_pred = []
+    for images, labels in dataset_test:
+        preds = model.predict(images)
+        y_pred.extend(np.argmax(preds, axis=1))
+
+        # Handle one-hot or sparse labels
+        if labels.shape[-1] > 1:  # one-hot
+            y_true.extend(np.argmax(labels.numpy(), axis=1))
+        else:  # already integer labels
+            y_true.extend(labels.numpy())
+
+
+    cm = confusion_matrix(y_true, y_pred)
+
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
+                xticklabels=class_names,
+                yticklabels=class_names)
+    plt.xlabel('Predicted')
+    plt.ylabel('True')
+    plt.title('Confusion Matrix on test')
     plt.show()
